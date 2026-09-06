@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#11998e">
+    <title>กระเป๋าเงิน — ซิงก์ทั่วโลก</title>
+    <!-- === เชื่อม Firebase === -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <!-- === EmailJS ส่งอีเมล === -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+        body { padding: 12px; background: #f0f8f4; }
+        .container { max-width: 500px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+        .head { background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff; padding: 16px; text-align: center; }
+        .bal { font-size: 28px; font-weight: bold; margin-top: 4px; }
+        .sync { font-size: 12px; margin-top: 4px; opacity: 0.9; }
+        .sel { padding: 10px; background: #e8f5e9; display: flex; gap: 6px; justify-content: center; }
+        select { padding: 6px 10px; border-radius: 6px; border: 2px solid #4caf50; font-size: 15px; }
+        .sum { display: flex; justify-content: space-around; padding: 10px; background: #f8f9fa; font-size: 13px; }
+        .sum div { text-align: center; }
+        .sum b { font-size: 15px; }
+        .inc { color: #00c853; }
+        .exp { color: #ff5252; }
+        .pend { color: #ff9800; }
+        .form { padding: 12px; }
+        label { display: block; margin: 8px 0 3px; font-weight: 600; font-size: 14px; }
+        input { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; }
+        input:focus { outline: none; border-color: #11998e; }
+        .btns { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        button { flex: 1; min-width: 90px; padding: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        button:active { opacity: 0.85; }
+        .b-inc { background: #00c853; color: #fff; }
+        .b-pend { background: #ff9800; color: #fff; }
+        .b-exp { background: #ff5252; color: #fff; }
+        .b-line { background: #00C300; color: #fff; width: 100%; margin-top: 8px; }
+        .b-mail { background: #ea4335; color: #fff; width: 100%; margin-top: 8px; }
+        .list { padding: 0 12px 12px; }
+        .list h3 { font-size: 15px; padding: 8px 0; border-bottom: 2px solid #f0f0f0; display: flex; justify-content: space-between; }
+        ul { list-style: none; max-height: 280px; overflow-y: auto; }
+        li { padding: 10px; margin: 6px 0; border-radius: 8px; background: #f8f9fa; border-left: 5px solid; display: flex; justify-content: space-between; align-items: center; }
+        li.inc { border-left-color: #00c853; }
+        li.exp { border-left-color: #ff5252; }
+        li.pend { border-left-color: #ff9800; background: #fff8e1; }
+        .txt { flex: 1; }
+        .del { color: #ccc; font-size: 20px; padding: 0 6px; cursor: pointer; border: none; background: none; }
+        .empty { text-align: center; color: #aaa; padding: 20px; }
+        .tabs { display: flex; background: #f1f8e9; }
+        .tab { flex: 1; padding: 10px; text-align: center; font-size: 14px; cursor: pointer; }
+        .tab.on { background: #fff; border-bottom: 3px solid #4caf50; color: #2e7d32; font-weight: bold; }
+        .page { display: none; padding: 12px; }
+        .page.on { display: block; }
+        .card { background: #f8f9fa; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+        .card h4 { margin-bottom: 8px; color: #2e7d32; }
+        .stat { font-size: 12px; color: #666; margin-top: 4px; }
+        .ok { color: #00c853; margin-top: 6px; font-size: 13px; }
+        .note { background: #e3f2fd; padding: 8px; border-radius: 6px; font-size: 13px; color: #0d47a1; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="head">
+            <h2>💰 กระเป๋าเงิน</h2>
+            <div class="bal" id="bal">฿ 0.00</div>
+            <div class="sync" id="syncStatus">🔄 กำลังโหลดข้อมูล...</div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab on" onclick="tab(0)">บันทึก</div>
+            <div class="tab" onclick="tab(1)">ตั้งค่า</div>
+        </div>
+
+        <!-- ===== หน้าบันทึก ===== -->
+        <div id="p0" class="page on">
+            <div class="sel">
+                <select id="m"></select>
+                <select id="y"></select>
+            </div>
+            <div class="sum">
+                <div>รับจริง<br><b class="inc" id="si">฿0</b></div>
+                <div>รอรับ<br><b class="pend" id="sp">฿0</b></div>
+                <div>จ่ายจริง<br><b class="exp" id="se">฿0</b></div>
+            </div>
+            <div class="form">
+                <label>รายการ</label>
+                <input type="text" id="txt" placeholder="ชื่อรายการ">
+                <label>วันที่</label>
+                <input type="date" id="dt">
+                <label>จำนวนเงิน</label>
+                <input type="number" id="amt" step="0.01" min="0" placeholder="0.00">
+                <div class="btns">
+                    <button class="b-inc" onclick="add('inc')">✅ รับ</button>
+                    <button class="b-pend" onclick="add('pend')">⏳ รอรับ</button>
+                    <button class="b-exp" onclick="add('exp')">➖ จ่าย</button>
+                </div>
+                <button class="b-line" onclick="sendLine()">🟢 ส่งสรุปไลน์</button>
+                <button class="b-mail" onclick="sendMail()">📧 ส่งสรุปอีเมล</button>
+            </div>
+            <div class="list">
+                <h3>รายการเดือนนี้</h3>
+                <ul id="lst"><li class="empty">ยังไม่มีรายการ</li></ul>
+            </div>
+        </div>
+
+        <!-- ===== หน้าตั้งค่า ===== -->
+        <div id="p1" class="page">
+            <div class="note">💡 กรอกรหัสจาก Firebase เพื่อให้ข้อมูลซิงก์ทุกเครื่อง</div>
+            <div class="card">
+                <h4>🗄️ ฐานข้อมูลออนไลน์ (Firebase)</h4>
+                <label>URL ฐานข้อมูล</label>
+                <input type="text" id="fbUrl" placeholder="https://xxx.firebaseio.com/">
+                <p class="stat">นำมาจาก Firebase Console → การตั้งค่า → ฐานข้อมูล</p>
+                <button onclick="initFB()" style="background:#4caf50; color:#fff; margin-top:8px">✅ เชื่อมต่อฐานข้อมูล</button>
+                <div id="fbStat" class="stat"></div>
+            </div>
+            <div class="card">
+                <h4>🟢 ตั้งค่าไลน์</h4>
+                <label>Token</label>
+                <input type="password" id="ltok" placeholder="Channel Access Token">
+                <label>User ID</label>
+                <input type="text" id="luid" placeholder="User ID">
+                <button onclick="svLine()" style="background:#00C300; color:#fff; margin-top:8px">บันทึกไลน์</button>
+                <div id="ls" class="stat"></div>
+            </div>
+            <div class="card">
+                <h4>📧 ตั้งค่าอีเมล Gmail</h4>
+                <label>อีเมลผู้รับ</label>
+                <input type="email" id="mto" placeholder="อีเมลที่รับข้อมูล">
+                <label>Service ID</label>
+                <input type="text" id="msid" placeholder="service_...">
+                <label>Template ID</label>
+                <input type="text" id="mtid" placeholder="template_...">
+                <label>Public Key</label>
+                <input type="text" id="mpk" placeholder="รหัส Public Key">
+                <p class="stat">💡 สมัครฟรีที่ emailjs.com</p>
+                <button onclick="svMail()" style="background:#ea4335; color:#fff; margin-top:8px">บันทึกอีเมล</button>
+                <div id="ms" class="stat"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// === ตัวแปรหลัก ===
+let arr = [];
+let db = null;
+let fbRef = null;
+let unsubscribe = null;
+let L = { tok: localStorage.ltok||'', uid: localStorage.luid||'' };
+let M = { to: localStorage.mto||'', sid: localStorage.msid||'', tid: localStorage.mtid||'', pk: localStorage.mpk||'' };
+const mn = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+// === เริ่มต้นระบบ ===
+window.onload = () => {
+    const d = new Date(), m = d.getMonth()+1, y = d.getFullYear();
+    // เตือนเดือน-ปี
+    for(let i=1;i<=12;i++) document.getElementById('m').innerHTML += `<option value="${i}"${i==m?' selected':''}>${mn[i]}</option>`;
+    for(let i=y+1;i>=y-5;i--) document.getElementById('y').innerHTML += `<option value="${i}"${i==y?' selected':''}>${i}</option>`;
+    document.getElementById('dt').valueAsDate = d;
+    // โหลดค่าตั้งค่า
+    document.getElementById('ltok').value = L.tok;
+    document.getElementById('luid').value = L.uid;
+    document.getElementById('mto').value = M.to;
+    document.getElementById('msid').value = M.sid;
+    document.getElementById('mtid').value = M.tid;
+    document.getElementById('mpk').value = M.pk;
+    document.getElementById('fbUrl').value = localStorage.fbUrl||'';
+    // เริ่ม EmailJS
+    if(M.pk) emailjs.init(M.pk);
+    // พยายามเชื่อม Firebase อัตโนมัติ
+    if(localStorage.fbUrl) initFB();
+    else {
+        // ถ้ายังไม่มีฐานข้อมูล ใช้เก็บในเครื่องไปก่อน
+        if(localStorage.wallet) arr = JSON.parse(localStorage.wallet);
+        render();
+        document.getElementById('syncStatus').textContent = '💾 เก็บในเครื่อง — ตั้งค่า Firebase เพื่อซิงก์ออนไลน์';
+    }
+    // เมื่อเปลี่ยนเดือน-ปี
+    document.getElementById('m').onchange = document.getElementById('y').onchange = render;
+};
+
+// === เชื่อมต่อ Firebase ===
+function initFB() {
+    const url = document.getElementById('fbUrl').value.trim() || localStorage.fbUrl;
+    if(!url) return alert('กรุณากรอก URL ฐานข้อมูลจาก Firebase');
+    localStorage.fbUrl = url;
+    
+    try {
+        // ตัดส่วนต้นออกให้ถูกต้อง
+        const dbURL = url.replace(/\/$/, '');
+        // เริ่มต้น Firebase App
+        const app = firebase.initializeApp({ databaseURL: dbURL });
+        db = app.database();
+        fbRef = db.ref('transactions');
+        
+        // ฟังข้อมูลแบบเรียลไทม์ — อัปเดตทันทีเมื่อมีคนแก้ไข
+        if(unsubscribe) unsubscribe();
+        unsubscribe = fbRef.on('value', snap => {
+            const data = snap.val();
+            arr = data ? Object.values(data) : [];
+            // บันทึกสำรองไว้ที่เครื่องด้วย
+            localStorage.wallet = JSON.stringify(arr);
+            render();
+            document.getElementById('syncStatus').textContent = '✅ ซิงก์ออนไลน์แล้ว — อัปเดตทันทีทุกเครื่อง';
+            document.getElementById('fbStat').innerHTML = '<span class="ok">✅ เชื่อมต่อฐานข้อมูลสำเร็จ!</span>';
+        });
+    } catch(e) {
+        document.getElementById('fbStat').innerHTML = '❌ ผิดพลาด: ' + e.message;
+        alert('เชื่อมต่อไม่ได้ ตรวจสอบ URL และสิทธิ์ใน Firebase');
+    }
+}
+
+// === บันทึกข้อมูล — ถ้ามีฐานข้อมูลส่งขึ้นเน็ต ถ้าไม่มีเก็บในเครื่อง ===
+function sv() {
+    localStorage.wallet = JSON.stringify(arr);
+    if(fbRef) {
+        fbRef.set(arr); // ส่งขึ้นฐานข้อมูลทันที
+    }
+}
+
+// === เปลี่ยนหน้า ===
+tab = i => {
+    document.querySelectorAll('.page').forEach((e,j)=>e.classList.toggle('on',j==i));
+    document.querySelectorAll('.tab').forEach((e,j)=>e.classList.toggle('on',j==i));
+};
+
+// === บันทึกตั้งค่าไลน์ ===
+svLine = () => {
+    L.tok = document.getElementById('ltok').value.trim();
+    L.uid = document.getElementById('luid').value.trim();
+    localStorage.ltok = L.tok; localStorage.luid = L.uid;
+    document.getElementById('ls').innerHTML = '<span class="ok">✅ บันทึกไลน์เรียบร้อย</span>';
+};
+
+// === บันทึกตั้งค่าอีเมล ===
+svMail = () => {
+    M.to = document.getElementById('mto').value.trim();
+    M.sid = document.getElementById('msid').value.trim();
+    M.tid = document.getElementById('mtid').value.trim();
+    M.pk = document.getElementById('mpk').value.trim();
+    localStorage.mto = M.to; localStorage.msid = M.sid; localStorage.mtid = M.tid; localStorage.mpk = M.pk;
+    if(M.pk) emailjs.init(M.pk);
+    document.getElementById('ms').innerHTML = '<span class="ok">✅ บันทึกอีเมลเรียบร้อย</span>';
+};
+
+// === เพิ่มรายการ ===
+add = t => {
+    let txt = document.getElementById('txt').value.trim();
+    let dt = document.getElementById('dt').value;
+    let amt = parseFloat(document.getElementById('amt').value);
+    if(!txt) return alert('กรุณาใส่ชื่อรายการ');
+    if(!dt) return alert('กรุณาเลือกวันที่');
+    if(isNaN(amt)||amt<=0) return alert('กรุณาใส่จำนวนเงิน');
+    let d = new Date(dt+'T00:00:00');
+    arr.unshift({ 
+        id: Date.now(), t, n:txt, a:amt, 
+        d: `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`, 
+        m: d.getMonth()+1, y: d.getFullYear() 
+    });
+    document.getElementById('txt').value = '';
+    document.getElementById('amt').value = '';
+    sv(); // บันทึกทันที → อัปเดตไปยังทุกเครื่องทันที
+    render();
+};
+
+// === แสดงผล ===
+render = () => {
+    let m = +document.getElementById('m').value;
+    let y = +document.getElementById('y').value;
+    let lst = arr.filter(x => x.m===m && x.y===y);
+    let si=0, sp=0, se=0;
+    let html = '';
+    lst.forEach(x => {
+        if(x.t==='inc') si+=x.a;
+        else if(x.t==='pend') sp+=x.a;
+        else se+=x.a;
+        let col = x.t==='inc'?'inc':x.t==='pend'?'pend':'exp';
+        let pm = x.t==='exp'?'-':'+';
+        html += `<li class="${col}"><div class="txt"><div>${x.n} ${x.t==='pend'?'⏳':''}</div><small>${x.d}</small></div><b>${pm}฿${x.a.toFixed(2)}</b><button class="del" onclick="del(${arr.indexOf(x)})">×</button></li>`;
+    });
+    document.getElementById('lst').innerHTML = html||'<li class="empty">ยังไม่มีรายการ</li>';
+    document.getElementById('si').textContent = `฿${si.toFixed(2)}`;
+    document.getElementById('sp').textContent = `฿${sp.toFixed(2)}`;
+    document.getElementById('se').textContent = `฿${se.toFixed(2)}`;
+    document.getElementById('bal').textContent = `฿${(si-se).toFixed(2)}`;
+};
+
+// === ลบรายการ ===
+del = i => { if(confirm('ลบรายการนี้?')) { arr.splice(i,1); sv(); render(); } };
+
+// === ส่งไลน์ ===
+sendLine = async () => {
+    if(!L.tok||!L.uid) return alert('กรุณาตั้งค่าไลน์ก่อน');
+    let m = +document.getElementById('m').value, y = +document.getElementById('y').value;
+    let lst = arr.filter(x => x.m===m && x.y===y);
+    let si=0, sp=0, se=0, txt='';
+    lst.forEach(x=>{
+        if(x.t==='inc') si+=x.a; else if(x.t==='pend') sp+=x.a; else se+=x.a;
+        txt += `${x.t==='inc'?'✅':x.t==='pend'?'⏳':'➖'} ${x.n} — ฿${x.a.toFixed(2)} (${x.d})\n`;
+    });
+    let msg = `📊 สรุป ${mn[m]} ${y}\nรับจริง: ฿${si.toFixed(2)}\nรอรับ: ฿${sp.toFixed(2)}\nจ่ายจริง: ฿${se.toFixed(2)}\nคงเหลือ: ฿${(si-se).toFixed(2)}\n\n${txt||'- ไม่มีรายการ -'}`;
+    try {
+        let r = await fetch('https://api.line.me/v2/bot/message/push',{
+            method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${L.tok}`},
+            body:JSON.stringify({to:L.uid, messages:[{type:'text', text:msg}]})
+        });
+        alert(r.ok?'✅ ส่งไลน์สำเร็จ':'❌ ส่งไม่สำเร็จ ตรวจสอบรหัส');
+    } catch { alert('❌ ส่งไม่ได้ ตรวจสอบอินเทอร์เน็ต'); }
+};
+
+// === ส่งอีเมล ===
+sendMail = async () => {
+    if(!M.to||!M.sid||!M.tid||!M.pk) return alert('กรุณาตั้งค่าอีเมลก่อน');
+    let m = +document.getElementById('m').value, y = +document.getElementById('y').value;
+    let lst = arr.filter(x => x.m===m && x.y===y);
+    let si=0, sp=0, se=0, txt='';
+    lst.forEach(x=>{
+        if(x.t==='inc') si+=x.a; else if(x.t==='pend') sp+=x.a; else se+=x.a;
+        txt += `${x.t==='inc'?'✅':x.t==='pend'?'⏳':'➖'} ${x.n} — ฿${x.a.toFixed(2)} (${x.d})<br>`;
+    });
+    try {
+        await emailjs.send(M.sid, M.tid, {
+            to_email: M.to, month: `${mn[m]} ${y}`,
+            inc: si.toFixed(2), pend: sp.toFixed(2), exp: se.toFixed(2),
+            bal: (si-se).toFixed(2), items: txt||'- ไม่มีรายการ -'
+        });
+        alert('✅ ส่งอีเมลสำเร็จ!');
+    } catch(e) { alert('❌ ส่งอีเมลไม่สำเร็จ: ตรวจสอบรหัสการตั้งค่า'); }
+};
+</script>
+</body>
+</html>
