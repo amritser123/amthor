@@ -431,6 +431,11 @@ function calcPhEl(){let V=n('ph-vv'),I=n('ph-ii'),R=n('ph-rr');const cnt=[V,I,R]
 function calcPhWave(){const l=n('ph-wl'),f=n('ph-ff');if(!ok([l,f]))return;document.getElementById('ph-wv').innerText=`v = ${(l*f).toFixed(2)} ม./วินาที`;document.getElementById('ph-wo').classList.add('show');}
 function calcPhLight(){const f=n('ph-lf'),do_=n('ph-ldo'),di=n('ph-ldi');let v='';if(!isNaN(f)&&!isNaN(do_)&&isNaN(di)){const d=1/(1/f-1/do_);v=`dᵢ = ${d.toFixed(2)} ซม.`;}else if(!isNaN(do_)&&!isNaN(di)&&isNaN(f)){v=`f = ${(1/(1/do_+1/di)).toFixed(2)} ซม.`;}else if(!isNaN(f)&&!isNaN(di)&&isNaN(do_)){v=`d₀ = ${(1/(1/f-1/di)).toFixed(2)} ซม.`;}else{alert('กรอกครบ 2 ค่า');return;}document.getElementById('ph-lv').innerText=v;document.getElementById('ph-lo').classList.add('show');}
 </script>
+    <div style="margin: 30px 0; padding: 15px; border-top: 2px solid #ccc;">
+  <a href="index.html" style="margin-right: 20px; font-size: 18px;">🏠 กลับหน้าแรก</a>
+  <a href="astro-calc-tab.html" style="margin-right: 20px; font-size: 18px;">📄 หน้าที่ 2</a>
+  <a href="star-calc.html" style="font-size: 18px;">📄 หน้าที่ 3</a>
+</div>
 </div>
 </body>
 </html>
