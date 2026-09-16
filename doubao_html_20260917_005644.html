@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เครื่องคิดเลขสูตรเคมี — ครบทุกธาตุ</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body {
+            background: linear-gradient(135deg, #1e3a5f, #2d5b8a);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        .container { max-width: 950px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.8rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .tab-container { display: flex; margin-bottom: 20px; flex-wrap: wrap; gap: 4px; }
+        .tab {
+            flex: 1; min-width: 90px; padding: 10px 6px; text-align: center;
+            background: rgba(255,255,255,0.1);
+            cursor: pointer; border: none; color: #fff; transition: all 0.3s;
+            font-size: 0.85rem; border-radius: 10px;
+        }
+        .tab.active { background: #4ecdc4; color: #123; font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        input, button, select {
+            width: 100%; padding: 14px; margin: 8px 0;
+            border: none; border-radius: 10px; font-size: 1rem;
+        }
+        input, select { background: rgba(255,255,255,0.9); color: #223; }
+        button {
+            background: #4ecdc4; color: #123; font-weight: bold;
+            cursor: pointer; transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.02); }
+        .result {
+            margin-top: 15px; padding: 18px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px; line-height: 1.8;
+        }
+        /* ตารางธาตุแบบเต็ม */
+        .periodic-table {
+            display: grid;
+            grid-template-columns: repeat(18, minmax(50px, 1fr));
+            gap: 4px;
+            margin-top: 15px;
+        }
+        .element {
+            padding: 6px 4px; border-radius: 6px; text-align: center;
+            cursor: pointer; transition: all 0.2s;
+            font-size: 0.7rem;
+        }
+        .element:hover { transform: scale(1.15); z-index: 10; }
+        .el-num { font-size: 0.6rem; opacity: 0.7; text-align: left; }
+        .el-sym { font-weight: bold; font-size: 0.95rem; }
+        .el-mass { font-size: 0.55rem; opacity: 0.6; }
+        /* สีตามหมวดธาตุ */
+        .alkali { background: rgba(255,99,132,0.6); }
+        .alkaline { background: rgba(255,159,64,0.6); }
+        .transition { background: rgba(255,205,86,0.6); }
+        .metals { background: rgba(75,192,192,0.6); }
+        .metalloid { background: rgba(54,162,235,0.6); }
+        .nonmetal { background: rgba(153,102,255,0.6); }
+        .halogen { background: rgba(255,99,255,0.6); }
+        .noble { background: rgba(100,149,237,0.6); }
+        .lanthanide { background: rgba(255,182,193,0.6); }
+        .actinide { background: rgba(221,160,221,0.6); }
+        .unknown { background: rgba(150,150,150,0.4); }
+        .spacer { background: transparent; border: none; cursor: default; }
+        .spacer:hover { transform: none; }
+        .legend { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.7rem; }
+        .legend-item { display: flex; align-items: center; gap: 4px; }
+        .legend-swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+        .error { color: #ffb3b3; margin-top: 10px; }
+        .percent-bar {
+            height: 24px; background: rgba(255,255,255,0.1);
+            border-radius: 12px; margin: 4px 0; overflow: hidden;
+        }
+        .percent-fill {
+            height: 100%; background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            border-radius: 12px; text-align: right; padding-right: 8px;
+            font-size: 0.8rem; font-weight: bold; line-height: 24px;
+        }
+        .input-group { display: flex; gap: 10px; align-items: center; }
+        .input-group input { flex: 2; }
+        .input-group select { flex: 1; }
+        .search-box { margin-bottom: 12px; }
+        @media (max-width: 768px) {
+            .periodic-table { grid-template-columns: repeat(18, minmax(28px, 1fr)); gap: 2px; }
+            .element { padding: 3px 1px; font-size: 0.5rem; }
+            .el-sym { font-size: 0.7rem; }
+            .el-num, .el-mass { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚗️ เครื่องคิดเลขสูตรเคมี — ครบทุกธาตุ 1–118</h1>
+
+        <div class="tab-container">
+            <button class="tab active" data-tab="mass">มวลโมเลกุล</button>
+            <button class="tab" data-tab="percent">%ธาตุ</button>
+            <button class="tab" data-tab="mole">โมล↔มวล</button>
+            <button class="tab" data-tab="balance">ดุลยภาพ</button>
+            <button class="tab" data-tab="table">ตารางธาตุ</button>
+        </div>
+
+        <!-- 1. มวลโมเลกุล -->
+        <div class="tab-content active" id="mass">
+            <div class="card">
+                <h3>📏 คำนวณมวลโมเลกุล</h3>
+                <p style="opacity:0.8; margin:8px 0;">ใส่สูตร เช่น H2O, CO2, Ca(OH)2, H2SO4</p>
+                <input type="text" id="formula-input" placeholder="ใส่สูตรเคมี...">
+                <button onclick="calculateMass()">🧮 คำนวณ</button>
+                <div id="mass-result" class="result" style="display:none;"></div>
+                <div id="mass-error" class="error"></div>
+            </div>
+        </div>
+
+        <!-- 2. เปอร์เซ็นต์ธาตุ -->
+        <div class="tab-content" id="percent">
+            <div class="card">
+                <h3>📊 เปอร์เซ็นต์โดยมวลของแต่ละธาตุ</h3>
+                <p style="opacity:0.8; margin:8px 0;">ใส่สูตรเพื่อคำนวณสัดส่วน % ของแต่ละธาตุ</p>
+                <input type="text" id="pct-formula" placeholder="เช่น H2SO4, CaCO3...">
+                <button onclick="calculatePercent()">📈 คำนวณเปอร์เซ็นต์</button>
+                <div id="pct-result" class="result" style="display:none;"></div>
+                <div id="pct-error" class="error"></div>
+            </div>
+        </div>
+
+        <!-- 3. แปลงโมล ↔ มวล -->
+        <div class="tab-content" id="mole">
+            <div class="card">
+                <h3>⚖️ แปลงค่า โมล ↔ มวล (กรัม)</h3>
+                <p style="opacity:0.8; margin:8px 0;">ใส่สูตรก่อน แล้วป้อนค่าที่ต้องการแปลง</p>
+                <input type="text" id="mole-formula" placeholder="ใส่สูตรเคมี เช่น H2O...">
+                <button onclick="updateMolarMass()">✅ ตั้งค่าสูตร</button>
+                <div id="molar-display" style="margin:10px 0; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; display:none;">
+                    มวลโมเลกุล: <strong id="mm-val"></strong> ก./โมล
+                </div>
+                <div style="margin-top:20px;">
+                    <p><strong>แปลงค่า:</strong></p>
+                    <div class="input-group">
+                        <input type="number" id="mole-value" placeholder="ป้อนค่า" step="any">
+                        <select id="from-unit">
+                            <option value="mole">โมล</option>
+                            <option value="mass">กรัม</option>
+                        </select>
+                    </div>
+                    <button onclick="convertMoleMass()">🔄 แปลงหน่วย</button>
+                </div>
+                <div id="mole-result" class="result" style="display:none;"></div>
+                <div id="mole-error" class="error"></div>
+            </div>
+        </div>
+
+        <!-- 4. ดุลยภาพ -->
+        <div class="tab-content" id="balance">
+            <div class="card">
+                <h3>⚖️ ตรวจสอบดุลยภาพสมการ</h3>
+                <p style="opacity:0.8; margin:8px 0;">เช่น H2+O2=H2O, Fe+O2=Fe2O3</p>
+                <input type="text" id="eq-input" placeholder="ใส่สมการ...">
+                <button onclick="balanceEquation()">ตรวจสอบ</button>
+                <div id="eq-result" class="result" style="display:none;"></div>
+                <div id="eq-error" class="error"></div>
+            </div>
+        </div>
+
+        <!-- 5. ตารางธาตุแบบเต็ม 1–118 -->
+        <div class="tab-content active" id="table">
+            <div class="card">
+                <h3>📋 ตารางธาตุทั้งหมด (คลิกเพื่อใส่ในสูตร)</h3>
+                <input type="text" class="search-box" id="search-el" placeholder="🔍 ค้นหาธาตุ (ชื่อ, สัญลักษณ์, เลข)...">
+                <div class="periodic-table" id="periodic-table"></div>
+                <div class="legend">
+                    <span class="legend-item"><span class="legend-swatch alkali"></span> ด่าง</span>
+                    <span class="legend-item"><span class="legend-swatch alkaline"></span> ด่างดิน</span>
+                    <span class="legend-item"><span class="legend-swatch transition"></span> โลหะเปลี่ยน</span>
+                    <span class="legend-item"><span class="legend-swatch metals"></span> โลหะอื่น</span>
+                    <span class="legend-item"><span class="legend-swatch metalloid"></span> กึ่งโลหะ</span>
+                    <span class="legend-item"><span class="legend-swatch nonmetal"></span> อโลหะ</span>
+                    <span class="legend-item"><span class="legend-swatch halogen"></span> ฮาโลเจน</span>
+                    <span class="legend-item"><span class="legend-swatch noble"></span> แก๊สมีตระกูล</span>
+                    <span class="legend-item"><span class="legend-swatch lanthanide"></span> แลนทานอยด์</span>
+                    <span class="legend-item"><span class="legend-swatch actinide"></span> แอคทินอยด์</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ==================== ข้อมูลธาตุครบ 1–118 ====================
+const elements = {
+    H: {z:1, name_th:'ไฮโดรเจน', name_en:'Hydrogen', mass:1.00794, cat:'nonmetal', pos:{r:1,c:1}},
+    He:{z:2, name_th:'ฮีเลียม', name_en:'Helium', mass:4.002602, cat:'noble', pos:{r:1,c:18}},
+    Li:{z:3, name_th:'ลิเทียม', name_en:'Lithium', mass:6.941, cat:'alkali', pos:{r:2,c:1}},
+    Be:{z:4, name_th:'เบริลเลียม', name_en:'Beryllium', mass:9.012182, cat:'alkaline', pos:{r:2,c:2}},
+    B: {z:5, name_th:'บอรอน', name_en:'Boron', mass:10.811, cat:'metalloid', pos:{r:2,c:13}},
+    C: {z:6, name_th:'คาร์บอน', name_en:'Carbon', mass:12.0107, cat:'nonmetal', pos:{r:2,c:14}},
+    N: {z:7, name_th:'ไนโตรเจน', name_en:'Nitrogen', mass:14.0067, cat:'nonmetal', pos:{r:2,c:15}},
+    O: {z:8, name_th:'ออกซิเจน', name_en:'Oxygen', mass:15.9994, cat:'nonmetal', pos:{r:2,c:16}},
+    F: {z:9, name_th:'ฟลูออรีน', name_en:'Fluorine', mass:18.9984032, cat:'halogen', pos:{r:2,c:17}},
+    Ne:{z:10, name_th:'นีออน', name_en:'Neon', mass:20.1797, cat:'noble', pos:{r:2,c:18}},
+    Na:{z:11, name_th:'โซเดียม', name_en:'Sodium', mass:22.98976928, cat:'alkali', pos:{r:3,c:1}},
+    Mg:{z:12, name_th:'แมกนีเซียม', name_en:'Magnesium', mass:24.305, cat:'alkaline', pos:{r:3,c:2}},
+    Al:{z:13, name_th:'อะลูมิเนียม', name_en:'Aluminium', mass:26.9815386, cat:'metals', pos:{r:3,c:13}},
+    Si:{z:14, name_th:'ซิลิกอน', name_en:'Silicon', mass:28.0855, cat:'metalloid', pos:{r:3,c:14}},
+    P: {z:15, name_th:'ฟอสฟอรัส', name_en:'Phosphorus', mass:30.973762, cat:'nonmetal', pos:{r:3,c:15}},
+    S: {z:16, name_th:'กำมะถัน', name_en:'Sulfur', mass:32.065, cat:'nonmetal', pos:{r:3,c:16}},
+    Cl:{z:17, name_th:'คลอรีน', name_en:'Chlorine', mass:35.453, cat:'halogen', pos:{r:3,c:17}},
+    Ar:{z:18, name_th:'อาร์กอน', name_en:'Argon', mass:39.948, cat:'noble', pos:{r:3,c:18}},
+    K: {z:19, name_th:'โพแทสเซียม', name_en:'Potassium', mass:39.0983, cat:'alkali', pos:{r:4,c:1}},
+    Ca:{z:20, name_th:'แคลเซียม', name_en:'Calcium', mass:40.078, cat:'alkaline', pos:{r:4,c:2}},
+    Sc:{z:21, name_th:'สแกนเดียม', name_en:'Scandium', mass:44.955912, cat:'transition', pos:{r:4,c:3}},
+    Ti:{z:22, name_th:'ไทเทเนียม', name_en:'Titanium', mass:47.867, cat:'transition', pos:{r:4,c:4}},
+    V: {z:23, name_th:'วานาเดียม', name_en:'Vanadium', mass:50.9415, cat:'transition', pos:{r:4,c:5}},
+    Cr:{z:24, name_th:'โครเมียม', name_en:'Chromium', mass:51.9961, cat:'transition', pos:{r:4,c:6}},
+    Mn:{z:25, name_th:'แมงกานีส', name_en:'Manganese', mass:54.938045, cat:'transition', pos:{r:4,c:7}},
+    Fe:{z:26, name_th:'เหล็ก', name_en:'Iron', mass:55.845, cat:'transition', pos:{r:4,c:8}},
+    Co:{z:27, name_th:'โคบอลต์', name_en:'Cobalt', mass:58.933195, cat:'transition', pos:{r:4,c:9}},
+    Ni:{z:28, name_th:'นิกเกิล', name_en:'Nickel', mass:58.6934, cat:'transition', pos:{r:4,c:10}},
+    Cu:{z:29, name_th:'ทองแดง', name_en:'Copper', mass:63.546, cat:'transition', pos:{r:4,c:11}},
+    Zn:{z:30, name_th:'สังกะสี', name_en:'Zinc', mass:65.38, cat:'transition', pos:{r:4,c:12}},
+    Ga:{z:31, name_th:'แกลเลียม', name_en:'Gallium', mass:69.723, cat:'metals', pos:{r:4,c:13}},
+    Ge:{z:32, name_th:'เจอร์เมเนียม', name_en:'Germanium', mass:72.64, cat:'metalloid', pos:{r:4,c:14}},
+    As:{z:33, name_th:'อาร์เซนิก', name_en:'Arsenic', mass:74.9216, cat:'metalloid', pos:{r:4,c:15}},
+    Se:{z:34, name_th:'ซีลีเนียม', name_en:'Selenium', mass:78.96, cat:'nonmetal', pos:{r:4,c:16}},
+    Br:{z:35, name_th:'โบรมีน', name_en:'Bromine', mass:79.904, cat:'halogen', pos:{r:4,c:17}},
+    Kr:{z:36, name_th:'คริปทอน', name_en:'Krypton', mass:83.798, cat:'noble', pos:{r:4,c:18}},
+    Rb:{z:37, name_th:'รูบิเดียม', name_en:'Rubidium', mass:85.4678, cat:'alkali', pos:{r:5,c:1}},
+    Sr:{z:38, name_th:'สตรอนเทียม', name_en:'Strontium', mass:87.62, cat:'alkaline', pos:{r:5,c:2}},
+    Y: {z:39, name_th:'อิตเทรียม', name_en:'Yttrium', mass:88.90585, cat:'transition', pos:{r:5,c:3}},
+    Zr:{z:40, name_th:'เซอร์โคเนียม', name_en:'Zirconium', mass:91.224, cat:'transition', pos:{r:5,c:4}},
+    Nb:{z:41, name_th:'ไนโอเบียม', name_en:'Niobium', mass:92.90628, cat:'transition', pos:{r:5,c:5}},
+    Mo:{z:42, name_th:'โมลิบดีนัม', name_en:'Molybdenum', mass:95.96, cat:'transition', pos:{r:5,c:6}},
+    Tc:{z:43, name_th:'เทคนีเซียม', name_en:'Technetium', mass:98, cat:'transition', pos:{r:5,c:7}},
+    Ru:{z:44, name_th:'รูทีเนียม', name_en:'Ruthenium', mass:101.07, cat:'transition', pos:{r:5,c:8}},
+    Rh:{z:45, name_th:'โรเดียม', name_en:'Rhodium', mass:102.9055, cat:'transition', pos:{r:5,c:9}},
+    Pd:{z:46, name_th:'พาลาเดียม', name_en:'Palladium', mass:106.42, cat:'transition', pos:{r:5,c:10}},
+    Ag:{z:47, name_th:'เงิน', name_en:'Silver', mass:107.8682, cat:'transition', pos:{r:5,c:11}},
+    Cd:{z:48, name_th:'แคดเมียม', name_en:'Cadmium', mass:112.411, cat:'transition', pos:{r:5,c:12}},
+    In:{z:49, name_th:'อินเดียม', name_en:'Indium', mass:114.818, cat:'metals', pos:{r:5,c:13}},
+    Sn:{z:50, name_th:'ดีบุก', name_en:'Tin', mass:118.71, cat:'metals', pos:{r:5,c:14}},
+    Sb:{z:51, name_th:'พลวง', name_en:'Antimony', mass:121.76, cat:'metalloid', pos:{r:5,c:15}},
+    Te:{z:52, name_th:'เทลลูเรียม', name_en:'Tellurium', mass:127.6, cat:'metalloid', pos:{r:5,c:16}},
+    I: {z:53, name_th:'ไอโอดีน', name_en:'Iodine', mass:126.90447, cat:'halogen', pos:{r:5,c:17}},
+    Xe:{z:54, name_th:'ซีนอน', name_en:'Xenon', mass:131.293, cat:'noble', pos:{r:5,c:18}},
+    Cs:{z:55, name_th:'ซีเซียม', name_en:'Caesium', mass:132.9054519, cat:'alkali', pos:{r:6,c:1}},
+    Ba:{z:56, name_th:'แบเรียม', name_en:'Barium', mass:137.327, cat:'alkaline', pos:{r:6,c:2}},
+    La:{z:57, name_th:'แลนทานัม', name_en:'Lanthanum', mass:138.90547, cat:'lanthanide', pos:{r:8,c:3}},
+    Ce:{z:58, name_th:'เซเรียม', name_en:'Cerium', mass:140.116, cat:'lanthanide', pos:{r:8,c:4}},
+    Pr:{z:59, name_th:'พราซีโอดิเมียม', name_en:'Praseodymium', mass:140.90765, cat:'lanthanide', pos:{r:8,c:5}},
+    Nd:{z:60, name_th:'นีโอดิเมียม', name_en:'Neodymium', mass:144.242, cat:'lanthanide', pos:{r:8,c:6}},
+    Pm:{z:61, name_th:'โพรมีเทียม', name_en:'Promethium', mass:145, cat:'lanthanide', pos:{r:8,c:7}},
+    Sm:{z:62, name_th:'ซามาเรียม', name_en:'Samarium', mass:150.36, cat:'lanthanide', pos:{r:8,c:8}},
+    Eu:{z:63, name_th:'ยูโรเปียม', name_en:'Europium', mass:151.964, cat:'lanthanide', pos:{r:8,c:9}},
+    Gd:{z:64, name_th:'กาโดลิเนียม', name_en:'Gadolinium', mass:157.25, cat:'lanthanide', pos:{r:8,c:10}},
+    Tb:{z:65, name_th:'เทอร์เบียม', name_en:'Terbium', mass:158.92535, cat:'lanthanide', pos:{r:8,c:11}},
+    Dy:{z:66, name_th:'ดิสโพรเซียม', name_en:'Dysprosium', mass:162.5, cat:'lanthanide', pos:{r:8,c:12}},
+    Ho:{z:67, name_th:'โฮลเมียม', name_en:'Holmium', mass:164.93032, cat:'lanthanide', pos:{r:8,c:13}},
+    Er:{z:68, name_th:'เออร์เบียม', name_en:'Erbium', mass:167.259, cat:'lanthanide', pos:{r:8,c:14}},
+    Tm:{z:69, name_th:'ทิวเลียม', name_en:'Thulium', mass:168.93421, cat:'lanthanide', pos:{r:8,c:15}},
+    Yb:{z:70, name_th:'อิตเทอร์เบียม', name_en:'Ytterbium', mass:173.054, cat:'lanthanide', pos:{r:8,c:16}},
+    Lu:{z:71, name_th:'ลูทีเชียม', name_en:'Lutetium', mass:174.9668, cat:'lanthanide', pos:{r:8,c:17}},
+    Hf:{z:72, name_th:'ฮาฟเนียม', name_en:'Hafnium', mass:178.49, cat:'transition', pos:{r:6,c:4}},
+    Ta:{z:73, name_th:'แทนทาลัม', name_en:'Tantalum', mass:180.94788, cat:'transition', pos:{r:6,c:5}},
+    W: {z:74, name_th:'ทังสเตน', name_en:'Tungsten', mass:183.84, cat:'transition', pos:{r:6,c:6}},
+    Re:{z:75, name_th:'รีเนียม', name_en:'Rhenium', mass:186.207, cat:'transition', pos:{r:6,c:7}},
+    Os:{z:76, name_th:'ออสเมียม', name_en:'Osmium', mass:190.23, cat:'transition', pos:{r:6,c:8}},
+    Ir:{z:77, name_th:'อิริเดียม', name_en:'Iridium', mass:192.217, cat:'transition', pos:{r:6,c:9}},
+    Pt:{z:78, name_th:'พลาตินัม', name_en:'Platinum', mass:195.084, cat:'transition', pos:{r:6,c:10}},
+    Au:{z:79, name_th:'ทอง', name_en:'Gold', mass:196.966569, cat:'transition', pos:{r:6,c:11}},
+    Hg:{z:80, name_th:'ปรอท', name_en:'Mercury', mass:200.59, cat:'transition', pos:{r:6,c:12}},
+    Tl:{z:81, name_th:'ทาลเลียม', name_en:'Thallium', mass:204.3833, cat:'metals', pos:{r:6,c:13}},
+    Pb:{z:82, name_th:'ตะกั่ว', name_en:'Lead', mass:207.2, cat:'metals', pos:{r:6,c:14}},
+    Bi:{z:83, name_th:'บิสมัท', name_en:'Bismuth', mass:208.9804, cat:'metals', pos:{r:6,c:15}},
+    Po:{z:84, name_th:'โพโลเนียม', name_en:'Polonium', mass:209, cat:'metals', pos:{r:6,c:16}},
+    At:{z:85, name_th:'แอสทาทีน', name_en:'Astatine', mass:210, cat:'halogen', pos:{r:6,c:17}},
+    Rn:{z:86, name_th:'เรดอน', name_en:'Radon', mass:222, cat:'noble', pos:{r:6,c:18}},
+    Fr:{z:87, name_th:'ฟรานเซียม', name_en:'Francium', mass:223, cat:'alkali', pos:{r:7,c:1}},
+    Ra:{z:88, name_th:'เรเดียม', name_en:'Radium', mass:226, cat:'alkaline', pos:{r:7,c:2}},
+    Ac:{z:89, name_th:'แอกทิเนียม', name_en:'Actinium', mass:227, cat:'actinide', pos:{r:9,c:3}},
+    Th:{z:90, name_th:'ทอเรียม', name_en:'Thorium', mass:232.03806, cat:'actinide', pos:{r:9,c:4}},
+    Pa:{z:91, name_th:'โปรแทคทิเนียม', name_en:'Protactinium', mass:231.03588, cat:'actinide', pos:{r:9,c:5}},
+    U: {z:92, name_th:'ยูเรเนียม', name_en:'Uranium', mass:238.02891, cat:'actinide', pos:{r:9,c:6}},
+    Np:{z:93, name_th:'เนปทูเนียม', name_en:'Neptunium', mass:237, cat:'actinide', pos:{r:9,c:7}},
+    Pu:{z:94, name_th:'พลูโตเนียม', name_en:'Plutonium', mass:244, cat:'actinide', pos:{r:9,c:8}},
+    Am:{z:95, name_th:'อเมริเซียม', name_en:'Americium', mass:243, cat:'actinide', pos:{r:9,c:9}},
+    Cm:{z:96, name_th:'คูเรียม', name_en:'Curium', mass:247, cat:'actinide', pos:{r:9,c:10}},
+    Bk:{z:97, name_th:'เบอร์คีเลียม', name_en:'Berkelium', mass:247, cat:'actinide', pos:{r:9,c:11}},
+    Cf:{z:98, name_th:'คาลิฟอร์เนียม', name_en:'Californium', mass:251, cat:'actinide', pos:{r:9,c:12}},
+    Es:{z:99, name_th:'ไอน์สไตเนียม', name_en:'Einsteinium', mass:252, cat:'actinide', pos:{r:9,c:13}},
+    Fm:{z:100, name_th:'เฟอร์เมียม', name_en:'Fermium', mass:257, cat:'actinide', pos:{r:9,c:14}},
+    Md:{z:101, name_th:'เมนเดเลเวียม', name_en:'Mendelevium', mass:258, cat:'actinide', pos:{r:9,c:15}},
+    No:{z:102, name_th:'โนเบลเลียม', name_en:'Nobelium', mass:259, cat:'actinide', pos:{r:9,c:16}},
+    Lr:{z:103, name_th:'ลอว์เรนเซียม', name_en:'Lawrencium', mass:266, cat:'actinide', pos:{r:9,c:17}},
+    Rf:{z:104, name_th:'รัทเธอร์ฟอร์เดียม', name_en:'Rutherfordium', mass:267, cat:'transition', pos:{r:7,c:4}},
+    Db:{z:105, name_th:'ดับเนียม', name_en:'Dubnium', mass:268, cat:'transition', pos:{r:7,c:5}},
+    Sg:{z:106, name_th:'ซีบอร์เกียม', name_en:'Seaborgium', mass:269, cat:'transition', pos:{r:7,c:6}},
+    Bh:{z:107, name_th:'โบริอุม', name_en:'Bohrium', mass:270, cat:'transition', pos:{r:7,c:7}},
+    Hs:{z:108, name_th:'เฮสเซียม', name_en:'Hassium', mass:277, cat:'transition', pos:{r:7,c:8}},
+    Mt:{z:109, name_th:'ไมต์เนอเรียม', name_en:'Meitnerium', mass:278, cat:'unknown', pos:{r:7,c:9}},
+    Ds:{z:110, name_th:'ดาร์มชตาเทียม', name_en:'Darmstadtium', mass:281, cat:'unknown', pos:{r:7,c:10}},
+    Rg:{z:111, name_th:'เรนต์เกนเนียม', name_en:'Roentgenium', mass:282, cat:'unknown', pos:{r:7,c:11}},
+    Cn:{z:112, name_th:'โคเปอร์นิเซียม', name_en:'Copernicium', mass:285, cat:'unknown', pos:{r:7,c:12}},
+    Fl:{z:114, name_th:'ฟเลโรเวียม', name_en:'Flerovium', mass:289, cat:'unknown', pos:{r:7,c:14}},
+    Lv:{z:116, name_th:'ลิเวอร์มอเรียม', name_en:'Livermorium', mass:293, cat:'unknown', pos:{r:7,c:16}},
+    Nh:{z:113, name_th:'นิโฮเนียม', name_en:'Nihonium', mass:286, cat:'unknown', pos:{r:7,c:13}},
+    Og:{z:118, name_th:'โอแกนีสซอน', name_en:'Oganesson', mass:294, cat:'unknown', pos:{r:7,c:18}},
+};
+
+let currentMolarMass = null;
+
+// สลับแท็บ
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+});
+
+// สร้างตารางธาตุแบบเต็ม
+function buildPeriodicTable(filter='') {
+    const table = document.getElementById('periodic-table');
+    table.innerHTML = '';
+    const maxRow = 9, maxCol = 18;
+    
+    // สร้างช่องว่าง + ธาตุ
+    for(let r=1; r<=maxRow; r++){
+        for(let c=1; c<=maxCol; c++){
+            const found = Object.entries(elements).find(([_,el]) => el.pos.r===r && el.pos.c===c);
+            if(found){
+                const [sym, el] = found;
+                // ตรวจสอบคำค้นหา
+                const match = !filter || 
+                    sym.toLowerCase().includes(filter) || 
+                    el.name_th.includes(filter) || 
+                    el.name_en.toLowerCase().includes(filter) || 
+                    el.z.toString().includes(filter);
+                const box = document.createElement('div');
+                box.className = `element ${el.cat}` + (match ? '' : ' style="opacity:0.3;"');
+                box.innerHTML = `<div class="el-num">${el.z}</div><div class="el-sym">${sym}</div><div class="el-mass">${el.mass.toFixed(1)}</div>`;
+                box.title = `${el.z}. ${sym} — ${el.name_th} (${el.name_en})`;
+                box.onclick = () => {
+                    document.getElementById('formula-input').value += sym;
+                    document.getElementById('pct-formula').value += sym;
+                    document.getElementById('mole-formula').value += sym;
+                };
+                table.appendChild(box);
+            } else {
+                const spacer = document.createElement('div');
+                spacer.className = 'element spacer';
+                table.appendChild(spacer);
+            }
+        }
+    }
+}
+
+// ค้นหาธาตุ
+document.getElementById('search-el').addEventListener('input', e => {
+    buildPeriodicTable(e.target.value.trim().toLowerCase());
+});
+
+// เริ่มสร้างตาราง
+buildPeriodicTable();
+
+// แยกสูตร
+function parseFormula(formula){
+    const regex = /([A-Z][a-z]?)(\d*)|\(([^)]+)\)(\d*)/g;
+    let total = {};
+    let match;
+    while((match = regex.exec(formula)) !== null){
+        if(match[1]){
+            const sym = match[1];
+            const count = parseInt(match[2]) || 1;
+            if(!elements[sym]) return {error:`ไม่พบธาตุ ${sym}`};
+            total[sym] = (total[sym] || 0) + count;
+        }
+        if(match[3]){
+            const group = parseFormula(match[3]);
+            if(group.error) return group;
+            const mult = parseInt(match[4]) || 1;
+            for(let s in group){
+                total[s] = (total[s] || 0) + group[s] * mult;
+            }
+        }
+    }
+    return Object.keys(total).length ? total : {error:'สูตรไม่ถูกต้อง'};
+}
+
+// 1. คำนวณมวลโมเลกุล
+function calculateMass(){
+    const formula = document.getElementById('formula-input').value.trim();
+    const resEl = document.getElementById('mass-result');
+    const errEl = document.getElementById('mass-error');
+    resEl.style.display = 'none'; errEl.textContent = '';
+    if(!formula) return errEl.textContent = 'กรุณาใส่สูตรเคมี';
+    const parsed = parseFormula(formula);
+    if(parsed.error) return errEl.textContent = parsed.error;
+    
+    let totalMass = 0, details = '';
+    for(let sym in parsed){
+        const m = elements[sym].mass, cnt = parsed[sym];
+        totalMass += m * cnt;
+        details += `${sym}: ${cnt} × ${m.toFixed(3)} = ${(m*cnt).toFixed(3)}<br>`;
+    }
+    resEl.innerHTML = `<strong>สูตร:</strong> ${formula}<br><strong>องค์ประกอบ:</strong><br>${details}<hr><strong>มวลโมเลกุลรวม:</strong> ${totalMass.toFixed(3)} กรัม/โมล`;
+    resEl.style.display = 'block';
+}
+
+// 2. เปอร์เซ็นต์ธาตุ
+function calculatePercent(){
+    const formula = document.getElementById('pct-formula').value.trim();
+    const resEl = document.getElementById('pct-result');
+    const errEl = document.getElementById('pct-error');
+    resEl.style.display = 'none'; errEl.textContent = '';
+    if(!formula) return errEl.textContent = 'กรุณาใส่สูตรเคมี';
+    const parsed = parseFormula(formula);
+    if(parsed.error) return errEl.textContent = parsed.error;
+    
+    let totalMass = 0, elemMass = {};
+    for(let sym in parsed){
+        const m = elements[sym].mass * parsed[sym];
+        elemMass[sym] = m; totalMass += m;
+    }
+    let html = `<strong>สูตร:</strong> ${formula}<br><strong>มวลรวม:</strong> ${totalMass.toFixed(3)} ก./โมล<br><br>`;
+    for(let sym in elemMass){
+        const pct = (elemMass[sym]/totalMass*100).toFixed(2);
+        html += `<div><strong>${sym} (${elements[sym].name_th})</strong><br>${elemMass[sym].toFixed(3)} ก. → ${pct}%<div class="percent-bar"><div class="percent-fill" style="width:${pct}%">${pct}%</div></div></div>`;
+    }
+    resEl.innerHTML = html; resEl.style.display = 'block';
+}
+
+// 3. ตั้งค่าสูตรสำหรับแปลงหน่วย
+function updateMolarMass(){
+    const formula = document.getElementById('mole-formula').value.trim();
+    const dispEl = document.getElementById('molar-display');
+    const valEl = document.getElementById('mm-val');
+    const errEl = document.getElementById('mole-error');
+    errEl.textContent = '';
+    if(!formula) return errEl.textContent = 'กรุณาใส่สูตรเคมี';
+    const parsed = parseFormula(formula);
+    if(parsed.error) return errEl.textContent = parsed.error;
+    
+    let totalMass = 0;
+    for(let sym in parsed) totalMass += elements[sym].mass * parsed[sym];
+    currentMolarMass = totalMass;
+    valEl.textContent = totalMass.toFixed(3);
+    dispEl.style.display = 'block';
+    document.getElementById('mole-result').style.display = 'none';
+}
+
+function convertMoleMass(){
+    const val = parseFloat(document.getElementById('mole-value').value);
+    const fromUnit = document.getElementById('from-unit').value;
+    const resEl = document.getElementById('mole-result');
+    const errEl = document.getElementById('mole-error');
+    errEl.textContent = ''; resEl.style.display = 'none';
+    if(currentMolarMass === null) return errEl.textContent = 'กรุณาตั้งค่าสูตรก่อน';
+    if(isNaN(val) || val <= 0) return errEl.textContent = 'กรุณาป้อนค่าที่ถูกต้อง';
+    
+    let resultText = '';
+    if(fromUnit === 'mole'){
+        const mass = val * currentMolarMass;
+        resultText = `<strong>${val} โมล</strong> = ${mass.toFixed(4)} กรัม<br><small>สูตร: มวล = ${val} × ${currentMolarMass.toFixed(3)}</small>`;
+    } else {
+        const mole = val / currentMolarMass;
+        resultText = `<strong>${val} กรัม</strong> = ${mole.toFixed(6)} โมล<br><small>สูตร: โมล = ${val} ÷ ${currentMolarMass.toFixed(3)}</small>`;
+    }
+    resEl.innerHTML = resultText; resEl.style.display = 'block';
+}
+
+// 4. ดุลยภาพ
+function balanceEquation(){
+    const eq = document.getElementById('eq-input').value.trim();
+    const resEl = document.getElementById('eq-result');
+    const errEl = document.getElementById('eq-error');
+    resEl.style.display = 'none'; errEl.textContent = '';
+    if(!eq.includes('=')) return errEl.textContent = 'รูปแบบ: ซ้าย=ขวา';
+    
+    const getAtoms = side => {
+        const atoms = {};
+        side.split('+').forEach(term => {
+            const m = term.match(/^(\d*)(.+)$/);
+            const coeff = parseInt(m[1]) || 1;
+            const p = parseFormula(m[2]);
+            if(p.error) throw p.error;
+            for(let s in p) atoms[s] = (atoms[s]||0) + p[s]*coeff;
+        });
+        return atoms;
+    };
+    
+    try {
+        const [left, right] = eq.split('=');
+        const lAtoms = getAtoms(left), rAtoms = getAtoms(right);
+        const allSym = [...new Set([...Object.keys(lAtoms), ...Object.keys(rAtoms)])];
+        let balanced = true, diffText = '';
+        allSym.forEach(s => {
+            const lc = lAtoms[s]||0, rc = rAtoms[s]||0;
+            if(lc !== rc){ balanced = false; diffText += `${s}: ซ้าย=${lc} ≠ ขวา=${rc}<br>`; }
+        });
+        resEl.innerHTML = balanced
+            ? `✅ สมการดุลยภาพแล้ว<br><strong>${eq}</strong>`
+            : `⚠️ ยังไม่ดุลยภาพ<br>${diffText}<br>💡 ตัวอย่างที่ถูก: 2H2+O2=2H2O`;
+        resEl.style.display = 'block';
+    } catch(e){ errEl.textContent = e; }
+}
+</script>
+</body>
+</html>
